@@ -1,7 +1,6 @@
 name: CI Build and Report
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -16,23 +15,31 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # 执行构建任务
+    # 设置 JDK 版本
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin' # 或者 'zulu'
+
+    # 缓存 Maven 的本地仓库，提升构建速度
+    - name: Cache Maven repository
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    # 安装依赖并构建项目
     - name: Build the project
-      run: |
-        ./gradlew build
+      run: mvn clean install
 
-    # 执行测试并收集覆盖率
+    # 如果需要测试覆盖率，可以运行测试
     - name: Run tests
-      run: |
-        ./gradlew test
+      run: mvn test
 
-    # 上传构建时间、测试覆盖率等数据作为 artifact
+    # 收集构建时间或覆盖率等数据（可选）
     - name: Collect Build Metrics
       run: |
-        echo "{\"build_time\": $(date +%s -r build.gradle), \"test_coverage\": 85}" > build_metrics.json
-
-    - name: Upload Build Metrics
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-metrics
-        path: build_metrics.json
+        echo "Build completed successfully"
